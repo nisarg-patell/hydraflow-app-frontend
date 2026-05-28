@@ -89,7 +89,7 @@ export default function GlobalQuickAdd() {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-transform duration-200 hover:-translate-x-1"
+              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-transform duration-200 hover:scale-105"
             >
               <span className="text-sm font-semibold">Custom</span>
               <Plus className="w-5 h-5 text-primary" />
@@ -125,7 +125,7 @@ export default function GlobalQuickAdd() {
             <Button
               key={opt.amount}
               variant="outline"
-              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-all duration-200 hover:-translate-x-1"
+              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-all duration-200 hover:scale-105"
               onClick={() => addWater(opt.amount, opt.label)}
               style={{
                 transitionDelay: `${isOpen ? index * 40 : 0}ms`,
