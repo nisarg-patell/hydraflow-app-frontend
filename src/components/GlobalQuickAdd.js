@@ -89,10 +89,12 @@ export default function GlobalQuickAdd() {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-transform duration-200 hover:scale-105"
+              className={`rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-transform duration-200 hover:scale-105 ${position === 'bottom-center' ? 'w-40 justify-between' : ''}`}
             >
-              <span className="text-sm font-semibold">Custom</span>
-              <Plus className="w-5 h-5 text-primary" />
+              <span className={`text-sm font-semibold ${position === 'bottom-left' ? 'order-last ml-1' : 'mr-1'}`}>Custom</span>
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-primary" />
+              </div>
             </Button>
           </DialogTrigger>
           <DialogContent className="rounded-3xl z-[60]">
@@ -125,7 +127,7 @@ export default function GlobalQuickAdd() {
             <Button
               key={opt.amount}
               variant="outline"
-              className="rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-all duration-200 hover:scale-105"
+              className={`rounded-full px-4 py-5 h-auto flex gap-3 items-center border-border hover:border-primary hover:bg-primary/5 shadow-lg bg-background transition-all duration-200 hover:scale-105 ${position === 'bottom-center' ? 'w-40 justify-between' : ''}`}
               onClick={() => addWater(opt.amount, opt.label)}
               style={{
                 transitionDelay: `${isOpen ? index * 40 : 0}ms`,
@@ -133,7 +135,7 @@ export default function GlobalQuickAdd() {
                 opacity: isOpen ? 1 : 0
               }}
             >
-              <div className={`flex flex-col leading-tight ${position === 'bottom-left' ? 'ml-1 items-start order-last' : 'mr-1 items-end'}`}>
+              <div className={`flex flex-col leading-tight ${position === 'bottom-left' ? 'ml-1 items-start order-last' : position === 'bottom-center' ? 'items-start' : 'mr-1 items-end'}`}>
                 <span className="text-sm font-semibold">{opt.amount}ml</span>
                 <span className="text-[10px] text-muted-foreground">{opt.label}</span>
               </div>
