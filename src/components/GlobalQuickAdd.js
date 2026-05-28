@@ -65,9 +65,9 @@ export default function GlobalQuickAdd() {
     }
   };
 
-  let positionClasses = "bottom-6 right-6 items-end";
-  if (position === 'bottom-left') positionClasses = "bottom-6 left-6 items-start";
-  if (position === 'bottom-center') positionClasses = "bottom-6 left-1/2 -translate-x-1/2 items-center";
+  let positionClasses = "bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 items-end";
+  if (position === 'bottom-left') positionClasses = "bottom-[calc(6rem+env(safe-area-inset-bottom))] left-6 items-start";
+  if (position === 'bottom-center') positionClasses = "bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 items-center";
 
   return (
     <div className={`fixed z-50 flex flex-col ${positionClasses}`}>
