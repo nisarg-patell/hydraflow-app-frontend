@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,22 @@ export default function GlobalQuickAdd() {
   const [customAmount, setCustomAmount] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [position, setPosition] = useState('bottom-right');
+
+  useEffect(() => {
+    if (user) {
+      axios.get(`${API}/settings`, { withCredentials: true })
+        .then(res => setPosition(res.data.quick_add_position || 'bottom-right'))
+        .catch(() => {});
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handlePosChange = (e) => setPosition(e.detail);
+    window.addEventListener('quick-add-position-changed', handlePosChange);
+    return () => window.removeEventListener('quick-add-position-changed', handlePosChange);
+  }, []);
+
   // Show only if logged in and on the dashboard
   if (!user || location.pathname !== '/') {
     return null;
@@ -49,8 +65,12 @@ export default function GlobalQuickAdd() {
     }
   };
 
+  let positionClasses = "bottom-6 right-6 items-end";
+  if (position === 'bottom-left') positionClasses = "bottom-6 left-6 items-start";
+  if (position === 'bottom-center') positionClasses = "bottom-6 left-1/2 -translate-x-1/2 items-center";
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className={`fixed z-50 flex flex-col ${positionClasses}`}>
       {/* Backdrop for closing when clicking outside */}
       {isOpen && (
         <div 
@@ -61,9 +81,9 @@ export default function GlobalQuickAdd() {
 
       {/* Speed Dial Options */}
       <div 
-        className={`flex flex-col items-end gap-3 mb-4 transition-all duration-300 origin-bottom z-50 ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-50 opacity-0 pointer-events-none'
-        }`}
+        className={`flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom z-50 ${
+          position === 'bottom-left' ? 'items-start' : position === 'bottom-center' ? 'items-center' : 'items-end'
+        } ${isOpen ? 'scale-100 opacity-100' : 'scale-50 opacity-0 pointer-events-none'}`}
       >
         <Dialog open={customDialogOpen} onOpenChange={setCustomDialogOpen}>
           <DialogTrigger asChild>
@@ -113,7 +133,7 @@ export default function GlobalQuickAdd() {
                 opacity: isOpen ? 1 : 0
               }}
             >
-              <div className="flex flex-col items-end leading-tight mr-1">
+              <div className={`flex flex-col leading-tight ${position === 'bottom-left' ? 'ml-1 items-start order-last' : 'mr-1 items-end'}`}>
                 <span className="text-sm font-semibold">{opt.amount}ml</span>
                 <span className="text-[10px] text-muted-foreground">{opt.label}</span>
               </div>

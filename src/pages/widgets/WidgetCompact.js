@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import LoginPage from '../LoginPage';
 import axios from 'axios';
 import { Droplet, Plus, ExternalLink } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function WidgetCompact() {
+  const { user, loading } = useAuth();
   const [total, setTotal] = useState(0);
   const [goal, setGoal] = useState(2000);
   const [flash, setFlash] = useState(null);
-  const [authed, setAuthed] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
@@ -18,7 +20,7 @@ export default function WidgetCompact() {
       ]);
       setTotal(t.data.total);
       setGoal(s.data.daily_goal || 2000);
-    } catch { setAuthed(false); }
+    } catch { /* silent fail */; }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -29,12 +31,14 @@ export default function WidgetCompact() {
       setFlash(amount);
       setTimeout(() => setFlash(null), 1000);
       fetchData();
-    } catch { setAuthed(false); }
+    } catch { /* silent fail */; }
   };
 
-  if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <a href="/" className="text-primary underline text-sm" data-testid="widget-login-link">Open app to sign in</a>
+  if (loading) return null;
+  
+  if (!user) return (
+    <div className="min-h-screen bg-background">
+      <LoginPage />
     </div>
   );
 
@@ -86,3 +90,4 @@ export default function WidgetCompact() {
     </div>
   );
 }
+

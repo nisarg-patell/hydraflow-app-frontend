@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Droplet, Plus, ExternalLink } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import LoginPage from '../LoginPage';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function WidgetProgress() {
+  const { user, loading } = useAuth();
   const [total, setTotal] = useState(0);
   const [goal, setGoal] = useState(2000);
-  const [authed, setAuthed] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
@@ -17,7 +19,7 @@ export default function WidgetProgress() {
       ]);
       setTotal(t.data.total);
       setGoal(s.data.daily_goal || 2000);
-    } catch { setAuthed(false); }
+    } catch { /* Handled globally */ }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -26,12 +28,14 @@ export default function WidgetProgress() {
     try {
       await axios.post(`${API}/water/log`, { amount, label: 'Glass' }, { withCredentials: true });
       fetchData();
-    } catch { setAuthed(false); }
+    } catch { /* fail silently in widget */ }
   };
 
-  if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <a href="/" className="text-primary underline text-sm" data-testid="widget-login-link">Open app to sign in</a>
+  if (loading) return null;
+  
+  if (!user) return (
+    <div className="min-h-screen bg-background">
+      <LoginPage />
     </div>
   );
 

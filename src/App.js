@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -23,6 +24,29 @@ import WidgetMiniBar from "./pages/widgets/WidgetMiniBar";
 function AppContent() {
   const location = useLocation();
   const isWidget = location.pathname.startsWith('/widget');
+
+  useEffect(() => {
+    if (isWidget) {
+      const manifest = document.querySelector('link[rel="manifest"]');
+      if (manifest) manifest.remove();
+      
+      const widgetNames = {
+        '/widget/quick-add': 'Quick Add',
+        '/widget/progress': 'Progress',
+        '/widget/one-tap': 'One Tap',
+        '/widget/stats': 'Stats',
+        '/widget/compact': 'HydroFlow',
+        '/widget/log-list': 'Logs',
+        '/widget/mini-bar': 'Mini Bar'
+      };
+      
+      const name = widgetNames[location.pathname] || 'Widget';
+      document.title = name;
+      
+      const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (appleTitle) appleTitle.setAttribute('content', name);
+    }
+  }, [isWidget, location.pathname]);
 
   return (
     <>

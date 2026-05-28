@@ -9,7 +9,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
-import { Droplet, Bell, BellRing, Vibrate, Volume2, Sun, Moon, Clock, Target, Music, Plus, X, AlarmClock, Info, Code, Heart, ExternalLink, Download, Smartphone, LayoutGrid, CircleDot, Zap, List, BarChart3 } from 'lucide-react';
+import { Droplet, Bell, BellRing, Vibrate, Volume2, Sun, Moon, Clock, Target, Music, Plus, X, AlarmClock, Info, Code, Heart, ExternalLink, Download, Smartphone, LayoutGrid, CircleDot, Zap, List, BarChart3, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -38,7 +38,7 @@ const REMINDER_INTERVALS = [
 ];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState({
     daily_goal: 2000,
@@ -49,6 +49,7 @@ export default function SettingsPage() {
     wake_time: '08:00',
     sleep_time: '22:00',
     custom_reminder_times: [],
+    quick_add_position: 'bottom-right',
   });
   const [goalInput, setGoalInput] = useState('2000');
   const [saving, setSaving] = useState(false);
@@ -384,6 +385,42 @@ export default function SettingsPage() {
             >
               <Moon className="w-4 h-4" /> Dark
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Layout Settings */}
+      <Card className="rounded-3xl shadow-sm animate-fade-in-delay-2" data-testid="layout-settings-card">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+              <LayoutGrid className="w-5 h-5 text-indigo-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold" style={{ fontFamily: 'Outfit, sans-serif' }}>Layout</CardTitle>
+              <CardDescription>Customize the interface</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label className="text-sm">Quick Add Button Position</Label>
+            <Select
+              value={settings.quick_add_position || 'bottom-right'}
+              onValueChange={(v) => {
+                updateSetting('quick_add_position', v);
+                window.dispatchEvent(new CustomEvent('quick-add-position-changed', { detail: v }));
+              }}
+            >
+              <SelectTrigger className="rounded-2xl h-12">
+                <SelectValue placeholder="Select position" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                <SelectItem value="bottom-center">Bottom Center</SelectItem>
+                <SelectItem value="bottom-right">Bottom Right</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -796,6 +833,18 @@ export default function SettingsPage() {
           </div>
 
           <Separator />
+
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="rounded-full px-6 h-12 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 gap-2 w-full max-w-xs"
+              data-testid="settings-logout-btn"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </div>
 
           <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">

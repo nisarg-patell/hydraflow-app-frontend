@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -18,7 +18,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [acceptedTC, setAcceptedTC] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  const location = useLocation();
+  const isWidget = location.pathname.startsWith('/widget');
+
+  if (user) {
+    if (isWidget) return null;
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
