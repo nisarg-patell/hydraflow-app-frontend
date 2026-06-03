@@ -70,7 +70,7 @@ export default function GlobalQuickAdd() {
   if (position === 'bottom-center') positionClasses = "bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 items-center";
 
   return (
-    <div className={`fixed z-50 flex flex-col ${positionClasses}`}>
+    <>
       {/* Backdrop for closing when clicking outside */}
       {isOpen && (
         <div 
@@ -78,6 +78,8 @@ export default function GlobalQuickAdd() {
           onClick={() => setIsOpen(false)}
         />
       )}
+
+      <div className={`fixed z-50 flex flex-col ${positionClasses}`}>
 
       {/* Speed Dial Options */}
       <div 
@@ -159,5 +161,6 @@ export default function GlobalQuickAdd() {
         <Plus className="w-6 h-6 transition-transform duration-300" />
       </Button>
     </div>
+    </>
   );
 }
