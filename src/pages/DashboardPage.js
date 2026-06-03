@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import ProgressRing from '../components/ProgressRing';
@@ -11,6 +11,8 @@ import LiquidBackground from '../components/LiquidBackground';
 import HydraPlant from '../components/HydraPlant';
 import { Switch } from '../components/ui/switch';
 import { Slider } from '../components/ui/slider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -23,6 +25,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [workout, setWorkout] = useState(false);
   const [urineColor, setUrineColor] = useState(3);
+  const [showLiquid, setShowLiquid] = useState(true);
+  
+  // Hold-to-edit state
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const pressTimer = useRef(null);
 
   const updateModifier = async (field, value) => {
     try {
@@ -44,6 +53,7 @@ export default function DashboardPage() {
       setTotal(todayRes.data.total);
       setGoal(todayRes.data.dynamic_goal || settingsRes.data.daily_goal || 2000);
       setHistory(histRes.data.history.reverse());
+      setShowLiquid(settingsRes.data.liquid_background ?? true);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -64,9 +74,22 @@ export default function DashboardPage() {
     };
     window.addEventListener('water-logged', handleWaterLogged);
     window.addEventListener('optimistic-water-logged', handleOptimistic);
+    
+    const handleSwMessage = (event) => {
+      if (event.data && event.data.type === 'WATER_LOGGED_FROM_SW') {
+        fetchData();
+      }
+    };
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    }
+    
     return () => {
       window.removeEventListener('water-logged', handleWaterLogged);
       window.removeEventListener('optimistic-water-logged', handleOptimistic);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      }
     };
   }, [fetchData]);
 
@@ -74,9 +97,43 @@ export default function DashboardPage() {
     try {
       await axios.delete(`${API}/water/log/${encodeURIComponent(timestamp)}`, { withCredentials: true });
       toast.success('Log deleted');
+      setIsEditModalOpen(false);
       fetchData();
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'UPDATE_NOTIFICATION' });
+      }
     } catch (err) {
       toast.error('Failed to delete');
+    }
+  };
+
+  const updateLog = async () => {
+    try {
+      await axios.put(`${API}/water/log/${encodeURIComponent(selectedLog.timestamp)}`, { amount: parseInt(editAmount) }, { withCredentials: true });
+      toast.success('Log updated');
+      setIsEditModalOpen(false);
+      fetchData();
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'UPDATE_NOTIFICATION' });
+      }
+    } catch (err) {
+      toast.error('Failed to update log');
+    }
+  };
+
+  const handlePointerDown = (log) => {
+    pressTimer.current = setTimeout(() => {
+      setSelectedLog(log);
+      setEditAmount(log.amount.toString());
+      setIsEditModalOpen(true);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500); // 500ms long press
+  };
+
+  const handlePointerUpOrLeave = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
     }
   };
 
@@ -119,7 +176,7 @@ export default function DashboardPage() {
 
   return (
     <>
-    <LiquidBackground percentage={percentage} />
+    {showLiquid && <LiquidBackground percentage={percentage} />}
     <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 space-y-10 pb-32 relative z-10" data-testid="dashboard-page">
       {/* Header & Motivational Text */}
       <div className="animate-fade-in text-center">
@@ -196,6 +253,9 @@ export default function DashboardPage() {
                   onValueChange={(v) => setUrineColor(v[0])}
                   onValueCommit={(v) => updateModifier('urine_color', v[0])}
                   className="py-4"
+                  trackClassName="bg-gradient-to-r from-yellow-100 via-yellow-400 to-yellow-800 h-2"
+                  rangeClassName="bg-transparent"
+                  thumbClassName="bg-background border-2 border-primary w-5 h-5 shadow-md"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
                   <span>Clear</span>
@@ -274,7 +334,14 @@ export default function DashboardPage() {
                 {logs.slice(0, 5).map((log, i) => {
                   const time = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                   return (
-                    <div key={i} className="flex items-center justify-between group">
+                    <div 
+                      key={i} 
+                      className="flex items-center justify-between group p-2 rounded-2xl transition-colors hover:bg-muted/50 select-none cursor-pointer"
+                      onPointerDown={() => handlePointerDown(log)}
+                      onPointerUp={handlePointerUpOrLeave}
+                      onPointerLeave={handlePointerUpOrLeave}
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                           <Droplet className="w-4 h-4" />
@@ -286,13 +353,6 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-semibold text-muted-foreground/60">{time}</span>
-                        <Button
-                          variant="ghost" size="icon"
-                          className="w-8 h-8 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => deleteLog(log.timestamp)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
                   );
@@ -304,6 +364,34 @@ export default function DashboardPage() {
         
       </div>
     </div>
+
+    {/* Hold-to-Edit Dialog */}
+    <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+      <DialogContent className="rounded-3xl max-w-sm">
+        <DialogHeader>
+          <DialogTitle style={{ fontFamily: 'Outfit, sans-serif' }}>Manage Entry</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Amount (ml)</label>
+            <Input 
+              type="number" 
+              value={editAmount} 
+              onChange={(e) => setEditAmount(e.target.value)} 
+              className="h-12 rounded-2xl"
+            />
+          </div>
+        </div>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+          <Button variant="destructive" className="rounded-full w-full" onClick={() => deleteLog(selectedLog?.timestamp)}>
+            Delete Log
+          </Button>
+          <Button className="rounded-full w-full" onClick={updateLog}>
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
