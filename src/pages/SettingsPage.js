@@ -9,7 +9,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
-import { Droplet, Bell, BellRing, Vibrate, Volume2, Sun, Moon, Clock, Target, Music, Plus, X, AlarmClock, Info, Code, Heart, ExternalLink, Download, Smartphone, LayoutGrid, CircleDot, Zap, List, BarChart3, LogOut } from 'lucide-react';
+import { Droplet, Bell, BellRing, Vibrate, Volume2, Sun, Moon, Clock, Target, Music, Plus, X, AlarmClock, Info, Code, Heart, ExternalLink, Download, Smartphone, LayoutGrid, CircleDot, Zap, List, BarChart3, LogOut, PanelTop } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -50,6 +50,9 @@ export default function SettingsPage() {
     sleep_time: '22:00',
     custom_reminder_times: [],
     quick_add_position: 'bottom-right',
+    notification_panel_enabled: false,
+    notification_amount1: 250,
+    notification_amount2: 500,
   });
   const [goalInput, setGoalInput] = useState('2000');
   const [saving, setSaving] = useState(false);
@@ -61,6 +64,39 @@ export default function SettingsPage() {
   const reminderTimerRef = useRef(null);
   const customTimerRef = useRef([]);
 
+  const syncServiceWorkerConfig = (currentSettings) => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SET_CONFIG',
+        token: localStorage.getItem('token'),
+        backendUrl: API.replace('/api', '/api'),
+        amount1: currentSettings.notification_amount1 || 250,
+        amount2: currentSettings.notification_amount2 || 500
+      });
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: 'HydroFlow Active',
+        body: `Ready to quick-add water!`
+      });
+    }
+  };
+
+  const toggleStickyNotification = async (enabled) => {
+    if (enabled) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        toast.error('Notification permission required for this feature.');
+        return;
+      }
+      syncServiceWorkerConfig(settings);
+    } else {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'HIDE_NOTIFICATION' });
+      }
+    }
+    updateSetting('notification_panel_enabled', enabled);
+  };
+
   const fetchSettings = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API}/settings`, { withCredentials: true });
@@ -68,6 +104,9 @@ export default function SettingsPage() {
       setGoalInput(String(data.daily_goal || 2000));
       if (data.theme && data.theme !== theme) {
         setTheme(data.theme);
+      }
+      if (data.notification_panel_enabled) {
+        syncServiceWorkerConfig(data);
       }
     } catch (err) {
       console.error(err);
@@ -422,6 +461,73 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl shadow-sm" data-testid="notification-panel-card">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center">
+              <PanelTop className="w-5 h-5 text-teal-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold" style={{ fontFamily: 'Outfit, sans-serif' }}>Notification Panel</CardTitle>
+              <CardDescription>Persistent quick-add controls</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm">Pin to Notification Drawer</Label>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">Shows a sticky notification with quick-add buttons on supported Android devices.</p>
+            </div>
+            <Switch
+              checked={settings.notification_panel_enabled || false}
+              onCheckedChange={(v) => toggleStickyNotification(v)}
+            />
+          </div>
+          
+          {settings.notification_panel_enabled && (
+            <div className="mt-4 space-y-4 pt-4 border-t border-border/50 animate-fade-in">
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Button 1 Amount</Label>
+                <Select
+                  value={settings.notification_amount1?.toString() || '250'}
+                  onValueChange={(v) => {
+                    updateSetting('notification_amount1', parseInt(v));
+                    syncServiceWorkerConfig({ ...settings, notification_amount1: parseInt(v) });
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl h-12 bg-background/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100ml (Sip)</SelectItem>
+                    <SelectItem value="250">250ml (Glass)</SelectItem>
+                    <SelectItem value="350">350ml (Cup)</SelectItem>
+                    <SelectItem value="500">500ml (Bottle)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Button 2 Amount</Label>
+                <Select
+                  value={settings.notification_amount2?.toString() || '500'}
+                  onValueChange={(v) => {
+                    updateSetting('notification_amount2', parseInt(v));
+                    syncServiceWorkerConfig({ ...settings, notification_amount2: parseInt(v) });
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl h-12 bg-background/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100ml (Sip)</SelectItem>
+                    <SelectItem value="250">250ml (Glass)</SelectItem>
+                    <SelectItem value="350">350ml (Cup)</SelectItem>
+                    <SelectItem value="500">500ml (Bottle)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

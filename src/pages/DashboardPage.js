@@ -4,9 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import ProgressRing from '../components/ProgressRing';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Droplet, Trash2, Flame, Activity } from 'lucide-react';
+import { Droplet, Trash2, Flame, Activity, Dumbbell, Stethoscope } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, Cell } from 'recharts';
 import { toast } from 'sonner';
+import LiquidBackground from '../components/LiquidBackground';
+import HydraPlant from '../components/HydraPlant';
+import { Switch } from '../components/ui/switch';
+import { Slider } from '../components/ui/slider';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -17,6 +21,17 @@ export default function DashboardPage() {
   const [goal, setGoal] = useState(2000);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [workout, setWorkout] = useState(false);
+  const [urineColor, setUrineColor] = useState(3);
+
+  const updateModifier = async (field, value) => {
+    try {
+      await axios.post(`${API}/daily-modifiers`, { [field]: value }, { withCredentials: true });
+      if (field === 'workout') setWorkout(value);
+      if (field === 'urine_color') setUrineColor(value);
+      fetchData();
+    } catch (e) {}
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -27,7 +42,7 @@ export default function DashboardPage() {
       ]);
       setLogs(todayRes.data.logs);
       setTotal(todayRes.data.total);
-      setGoal(settingsRes.data.daily_goal || 2000);
+      setGoal(todayRes.data.dynamic_goal || settingsRes.data.daily_goal || 2000);
       setHistory(histRes.data.history.reverse());
     } catch (err) {
       console.error('Fetch error:', err);
@@ -38,8 +53,14 @@ export default function DashboardPage() {
 
   useEffect(() => { 
     fetchData(); 
-    window.addEventListener('water-logged', fetchData);
-    return () => window.removeEventListener('water-logged', fetchData);
+    const handleWaterLogged = () => {
+      fetchData();
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'UPDATE_NOTIFICATION' });
+      }
+    };
+    window.addEventListener('water-logged', handleWaterLogged);
+    return () => window.removeEventListener('water-logged', handleWaterLogged);
   }, [fetchData]);
 
   const deleteLog = async (timestamp) => {
@@ -77,8 +98,22 @@ export default function DashboardPage() {
   const avgIntake = history.length > 0 ? Math.round(history.reduce((a, b) => a + b.amount, 0) / history.length) : 0;
   const daysGoalMet = history.filter(h => h.amount >= goal).length;
 
+  const currentHour = new Date().getHours() + (new Date().getMinutes() / 60);
+  const startHour = 8;
+  const activeHours = 14;
+  let expectedPace = 0;
+  if (currentHour < startHour) expectedPace = 0;
+  else if (currentHour >= startHour + activeHours) expectedPace = goal;
+  else expectedPace = goal * ((currentHour - startHour) / activeHours);
+  
+  let paceStatus = 'on-track';
+  if (total < expectedPace - 250) paceStatus = 'behind';
+  else if (total > expectedPace + 250) paceStatus = 'ahead';
+
   return (
-    <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 space-y-10 pb-32" data-testid="dashboard-page">
+    <>
+    <LiquidBackground percentage={percentage} />
+    <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 space-y-10 pb-32 relative z-10" data-testid="dashboard-page">
       {/* Header & Motivational Text */}
       <div className="animate-fade-in text-center">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -100,8 +135,72 @@ export default function DashboardPage() {
             </span>
           </div>
         </div>
+        
+        {/* Widget 1.5: Pace Maker Banner & Hydra Plant */}
+        <div className="animate-fade-in-delay-2 space-y-4">
+          {paceStatus === 'behind' && (
+            <div className="bg-orange-500/10 text-orange-600 rounded-2xl p-4 text-sm font-medium text-center shadow-sm">
+              You're {Math.round(expectedPace - total)}ml behind schedule! Drink a glass now to catch up.
+            </div>
+          )}
+          {paceStatus === 'ahead' && (
+            <div className="bg-pink-500/10 text-pink-600 rounded-2xl p-4 text-sm font-medium text-center shadow-sm">
+              You're ahead of schedule! Great pacing today.
+            </div>
+          )}
+          <HydraPlant paceStatus={paceStatus} />
+        </div>
 
-        {/* Widget 2: Stats Row */}
+        {/* Widget 2: Health Check */}
+        <Card className="rounded-3xl shadow-none border border-border/60 bg-card/40 backdrop-blur-md animate-fade-in-delay-2">
+          <CardHeader className="pb-2 pt-6 px-6">
+            <CardTitle className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-widest" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <Stethoscope className="w-4 h-4" /> Daily Health Check
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6 pb-6 pt-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Dumbbell className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Workout Today?</p>
+                  <p className="text-[10px] text-muted-foreground">+500ml to daily goal</p>
+                </div>
+              </div>
+              <Switch checked={workout} onCheckedChange={(v) => updateModifier('workout', v)} />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
+                  <Droplet className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Urine Color</p>
+                  <p className="text-[10px] text-muted-foreground">Adjusts hydration needs</p>
+                </div>
+              </div>
+              <div className="px-2">
+                <Slider 
+                  value={[urineColor]} 
+                  min={1} max={5} step={1} 
+                  onValueChange={(v) => setUrineColor(v[0])}
+                  onValueCommit={(v) => updateModifier('urine_color', v[0])}
+                  className="py-4"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
+                  <span>Clear</span>
+                  <span>Normal</span>
+                  <span>Dark</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Widget 3: Stats Row */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in-delay-2">
           <Card className="rounded-3xl shadow-none border border-border/60 bg-card/40 backdrop-blur-md transition-all hover:bg-card/60">
             <CardContent className="p-5 flex items-center gap-4">
@@ -198,5 +297,6 @@ export default function DashboardPage() {
         
       </div>
     </div>
+    </>
   );
 }
