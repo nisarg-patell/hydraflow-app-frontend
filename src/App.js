@@ -50,7 +50,7 @@ function AppContent() {
 
   return (
     <>
-      <div className={`min-h-screen bg-background ${isWidget ? '' : 'pb-20 sm:pb-0'}`}>
+      <div className={`min-h-screen bg-background ${isWidget ? '' : 'pb-32 sm:pb-12'}`}>
         {!isWidget && <Navbar />}
         <Routes>
           <Route path="/login" element={<LoginPage />} />
