@@ -35,10 +35,12 @@ export default function DashboardPage() {
 
   const updateModifier = async (field, value) => {
     try {
-      await axios.post(`${API}/daily-modifiers`, { [field]: value }, { withCredentials: true });
+      // Optimistic UI updates
       if (field === 'workout') setWorkout(value);
       if (field === 'urine_color') setUrineColor(value);
-      fetchData();
+      
+      await axios.post(`${API}/daily-modifiers`, { [field]: value }, { withCredentials: true });
+      fetchData(); // Silently correct background numbers
     } catch (e) {}
   };
 
@@ -248,9 +250,9 @@ export default function DashboardPage() {
               </div>
               <div className="px-2">
                 <Slider 
-                  value={[urineColor]} 
+                  key={`urine-slider-${urineColor}`}
+                  defaultValue={[urineColor]} 
                   min={1} max={5} step={1} 
-                  onValueChange={(v) => setUrineColor(v[0])}
                   onValueCommit={(v) => updateModifier('urine_color', v[0])}
                   className="py-4"
                   trackClassName="bg-gradient-to-r from-yellow-100 via-yellow-400 to-yellow-800 h-2"

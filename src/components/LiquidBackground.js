@@ -9,8 +9,7 @@ export default function LiquidBackground({ percentage }) {
       <div 
         className="absolute bottom-0 left-[-50%] right-[-50%] bg-sky-400 transition-all duration-700 ease-out"
         style={{ 
-          height: `${fillLevel}%`,
-          filter: 'blur(8px)',
+          height: `${fillLevel}%`
         }}
       >
         {/* Wave effect layer 1 */}

@@ -34,10 +34,11 @@ self.addEventListener('message', (event) => {
   }
 });
 
-async function showStickyNotification(title, body) {
+async function showStickyNotification(title, body, total, goal) {
   const options = {
     body: body,
     icon: '/logo192.png',
+    image: backendUrl ? `${backendUrl}/water/progress_image?total=${total || 0}&goal=${goal || 2000}&t=${Date.now()}` : undefined,
     badge: '/logo192.png',
     requireInteraction: true, // Makes it sticky on supported Androids
     tag: 'hydroflow-sticky', // Ensures we overwrite the same notification
@@ -59,7 +60,7 @@ async function refreshNotificationData() {
     const todayData = await todayRes.json();
     const total = todayData.total;
     const goal = todayData.dynamic_goal || 2000;
-    showStickyNotification('HydroFlow Progress', `${total}ml / ${goal}ml logged today!`);
+    showStickyNotification('HydroFlow Progress', `${total}ml / ${goal}ml logged today!`, total, goal);
   } catch (err) {
     console.error('Failed to refresh notification data:', err);
   }
