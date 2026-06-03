@@ -8,7 +8,31 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
-        <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+        <link rel="manifest" id="app-manifest" href="%PUBLIC_URL%/manifest.json" />
+        <script>
+            // Dynamically change the manifest for widget routes so Android Chrome installs the specific widget
+            if (window.location.pathname.startsWith('/widget/')) {
+                const widgetName = window.location.pathname.split('/').pop().split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const manifest = {
+                    short_name: widgetName || "Widget",
+                    name: "HydroFlow " + (widgetName || "Widget"),
+                    icons: [
+                        { src: "/logo.svg", type: "image/svg+xml", sizes: "192x192 512x512" },
+                        { src: "/logo.svg", type: "image/svg+xml", sizes: "any", purpose: "any maskable" }
+                    ],
+                    start_url: window.location.pathname,
+                    display: "standalone",
+                    theme_color: "#000000",
+                    background_color: "#ffffff"
+                };
+                const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                document.addEventListener("DOMContentLoaded", function() {
+                    const el = document.getElementById('app-manifest');
+                    if (el) el.setAttribute('href', url);
+                });
+            }
+        </script>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <meta name="apple-mobile-web-app-title" content="HydroFlow" />

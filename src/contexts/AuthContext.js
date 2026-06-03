@@ -4,6 +4,17 @@ import axios from 'axios';
 const AuthContext = createContext(null);
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -11,9 +22,17 @@ axios.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== `${API}/auth/refresh`) {
       originalRequest._retry = true;
       try {
-        await axios.post(`${API}/auth/refresh`, {}, { withCredentials: true });
+        const refreshToken = localStorage.getItem('refresh_token');
+        const { data } = await axios.post(`${API}/auth/refresh`, { refresh_token: refreshToken }, { withCredentials: true });
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+          if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+          originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        }
         return axios(originalRequest);
       } catch (refreshError) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
         return Promise.reject(refreshError);
       }
     }
@@ -50,6 +69,8 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       const { data } = await axios.post(`${API}/auth/login`, { email, password }, { withCredentials: true });
+      if (data.access_token) localStorage.setItem('access_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       setUser(data);
       return { success: true };
     } catch (e) {
@@ -60,6 +81,8 @@ export function AuthProvider({ children }) {
   const register = async (email, password, name) => {
     try {
       const { data } = await axios.post(`${API}/auth/register`, { email, password, name }, { withCredentials: true });
+      if (data.access_token) localStorage.setItem('access_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       setUser(data);
       return { success: true };
     } catch (e) {
@@ -71,6 +94,8 @@ export function AuthProvider({ children }) {
     try {
       await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
     } catch { /* ignore */ }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     setUser(false);
   };
 
@@ -81,6 +106,8 @@ export function AuthProvider({ children }) {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
       const { data } = await axios.post(`${API}/auth/firebase`, { token }, { withCredentials: true });
+      if (data.access_token) localStorage.setItem('access_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       setUser(data);
       return { success: true };
     } catch (e) {
