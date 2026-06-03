@@ -53,6 +53,7 @@ export default function SettingsPage() {
     notification_panel_enabled: false,
     notification_amount1: 250,
     notification_amount2: 500,
+    haptic_feedback: true,
   });
   const [goalInput, setGoalInput] = useState('2000');
   const [saving, setSaving] = useState(false);
@@ -460,6 +461,16 @@ export default function SettingsPage() {
                 <SelectItem value="bottom-right">Bottom Right</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
+            <div>
+              <Label className="text-sm">Haptic Feedback</Label>
+              <p className="text-xs text-muted-foreground mt-1">Slight vibration when logging water</p>
+            </div>
+            <Switch
+              checked={settings.haptic_feedback ?? true}
+              onCheckedChange={(v) => updateSetting('haptic_feedback', v)}
+            />
           </div>
         </CardContent>
       </Card>

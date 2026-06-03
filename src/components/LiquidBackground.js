@@ -1,27 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 export default function LiquidBackground({ percentage }) {
-  const [tilt, setTilt] = useState(0);
-
-  useEffect(() => {
-    const handleOrientation = (e) => {
-      // e.gamma is the left-to-right tilt in degrees, where right is positive
-      let tiltAngle = e.gamma || 0;
-      // clamp tilt to reasonable range
-      tiltAngle = Math.max(-45, Math.min(45, tiltAngle));
-      setTilt(tiltAngle);
-    };
-
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', handleOrientation);
-    }
-    return () => {
-      if (window.DeviceOrientationEvent) {
-        window.removeEventListener('deviceorientation', handleOrientation);
-      }
-    };
-  }, []);
-
   // Ensure percentage is between 5% and 100%
   const fillLevel = Math.max(5, Math.min(100, percentage));
 
@@ -31,8 +10,6 @@ export default function LiquidBackground({ percentage }) {
         className="absolute bottom-0 left-[-50%] right-[-50%] bg-blue-500 transition-all duration-700 ease-out"
         style={{ 
           height: `${fillLevel}%`,
-          transform: `rotate(${tilt}deg)`,
-          transformOrigin: 'bottom center',
           filter: 'blur(8px)',
         }}
       >

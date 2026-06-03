@@ -32,6 +32,7 @@ export default function GlobalQuickAdd() {
   const [isOpen, setIsOpen] = useState(false);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [position, setPosition] = useState('bottom-right');
+  const [haptic, setHaptic] = useState(true);
   const [beverage, setBeverage] = useState('water');
 
   useEffect(() => {
@@ -53,21 +54,32 @@ export default function GlobalQuickAdd() {
     return null;
   }
 
-  const addWater = async (amount, label) => {
-    try {
-      const activeBeverage = BEVERAGES.find(b => b.id === beverage);
-      await axios.post(`${API}/water/log`, { 
-        amount, 
-        label: `${activeBeverage.label} ${label}`,
-        beverage_type: activeBeverage.id,
-        multiplier: activeBeverage.multiplier
-      }, { withCredentials: true });
-      toast.success(`Logged ${activeBeverage.label} (+${parseInt(amount * activeBeverage.multiplier)}ml effective)`);
-      setIsOpen(false);
-      window.dispatchEvent(new Event('water-logged'));
-    } catch (err) {
-      toast.error('Failed to log water');
+  const addWater = (amount, label) => {
+    const activeBeverage = BEVERAGES.find(b => b.id === beverage);
+    const effectiveAmount = parseInt(amount * activeBeverage.multiplier);
+
+    if (haptic && navigator.vibrate) {
+      navigator.vibrate(50);
     }
+
+    setIsOpen(false);
+    toast.success(`Logged ${activeBeverage.label} (+${effectiveAmount}ml effective)`);
+    
+    // Optimistic UI update
+    window.dispatchEvent(new CustomEvent('optimistic-water-logged', { detail: { amount: effectiveAmount } }));
+
+    axios.post(`${API}/water/log`, { 
+      amount, 
+      label: `${activeBeverage.label} ${label}`,
+      beverage_type: activeBeverage.id,
+      multiplier: activeBeverage.multiplier
+    }, { withCredentials: true })
+    .then(() => {
+      window.dispatchEvent(new Event('water-logged'));
+    })
+    .catch((err) => {
+      toast.error('Failed to log water');
+    });
   };
 
   const handleCustomAdd = () => {

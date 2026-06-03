@@ -59,8 +59,15 @@ export default function DashboardPage() {
         navigator.serviceWorker.controller.postMessage({ type: 'UPDATE_NOTIFICATION' });
       }
     };
+    const handleOptimistic = (e) => {
+      setTotal(prev => prev + e.detail.amount);
+    };
     window.addEventListener('water-logged', handleWaterLogged);
-    return () => window.removeEventListener('water-logged', handleWaterLogged);
+    window.addEventListener('optimistic-water-logged', handleOptimistic);
+    return () => {
+      window.removeEventListener('water-logged', handleWaterLogged);
+      window.removeEventListener('optimistic-water-logged', handleOptimistic);
+    };
   }, [fetchData]);
 
   const deleteLog = async (timestamp) => {
